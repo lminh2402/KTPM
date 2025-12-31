@@ -1,0 +1,330 @@
+import React, { useState } from 'react';
+import { 
+  Box, 
+  Card, 
+  CardContent, 
+  TextField, 
+  Button, 
+  Typography, 
+  CircularProgress,
+  Alert,
+  Divider,
+  Link
+} from '@mui/material';
+import { login, register } from '../../services/authService';
+
+const Login = ({ onLoginSuccess }) => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    email: '',
+    fullName: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    username: false,
+    password: false,
+    confirmPassword: false,
+    email: false,
+    fullName: false
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    if (!formData.username) {
+      errors.username = true;
+      isValid = false;
+    }
+
+    if (!formData.password) {
+      errors.password = true;
+      isValid = false;
+    }
+
+    if (isRegistering) {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = true;
+        isValid = false;
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = true;
+        isValid = false;
+      }
+
+      if (!formData.email) {
+        errors.email = true;
+        isValid = false;
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        errors.email = true;
+        isValid = false;
+      }
+
+      if (!formData.fullName) {
+        errors.fullName = true;
+        isValid = false;
+      }
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!validateForm()) {
+      setError('Điền đúng tất cả các trường thông tin.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (isRegistering) {
+        await register({
+          username: formData.username,
+          password: formData.password,
+          email: formData.email,
+          fullName: formData.fullName
+        });
+        setIsRegistering(false);
+        setFormData({
+          username: '',
+          password: '',
+          confirmPassword: '',
+          email: '',
+          fullName: ''
+        });
+      } else {
+        await login(formData.username, formData.password);
+        onLoginSuccess();
+      }
+    } catch (err) {
+      const errorMessage = 
+        err.response?.data?.message || 
+        err.message || 
+        (isRegistering ? 'Đăng ký thất bại. Vui lòng thử lại.' : 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
+      
+      setError(errorMessage);
+      
+      // Highlight the fields with error
+      setFieldErrors({
+        username: true,
+        password: true,
+        confirmPassword: isRegistering,
+        email: isRegistering,
+        fullName: isRegistering
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'background.default',
+        padding: 2
+      }}
+    >
+      <Card 
+        sx={{
+          maxWidth: 400,
+          width: '100%',
+          borderRadius: 3,
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
+          overflow: 'visible'
+        }}
+      >
+        <Box 
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            mt: -5
+          }}
+        >
+          <Box
+            sx={{
+              width: 100,
+              height: 100,
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+              padding: 1,
+            }}
+          >
+            <img 
+              src="/logo.svg" 
+              alt="LV Logo" 
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          </Box>
+        </Box>
+
+        <CardContent sx={{ px: 4, py: 3 }}>
+          <Typography variant="h5" align="center" sx={{ mb: 1, fontWeight: 600 }}>
+SOICT HUST    
+          </Typography>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            align="center" 
+            sx={{ mb: 3 }}
+          >
+            {isRegistering ? 'Tạo tài khoản mới' : 'Nhập thông tin để truy cập bảng điều khiển'}
+          </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <TextField 
+              label="Username"
+              name="username"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              error={fieldErrors.username}
+              helperText={fieldErrors.username ? "Tên đăng nhập là bắt buộc" : ""}
+            />
+            
+            {isRegistering && (
+              <TextField 
+                label="Full Name"
+                name="fullName"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                error={fieldErrors.fullName}
+                helperText={fieldErrors.fullName ? "Họ và tên là bắt buộc" : ""}
+              />
+            )}
+            
+            {isRegistering && (
+              <TextField 
+                label="Email"
+                name="email"
+                type="email"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                error={fieldErrors.email}
+                helperText={fieldErrors.email ? "Email hợp lệ là bắt buộc" : ""}
+              />
+            )}
+
+            <TextField 
+              label="Password"
+              name="password"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              error={fieldErrors.password}
+              helperText={fieldErrors.password ? "Mật khẩu là bắt buộc" : ""}
+            />
+
+            {isRegistering && (
+              <TextField 
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                error={fieldErrors.confirmPassword}
+                helperText={fieldErrors.confirmPassword ? "Mật khẩu không khớp" : ""}
+              />
+            )}
+
+            <Button 
+              type="submit"
+              variant="contained"
+              size="large"
+              fullWidth
+              sx={{ mt: 3, mb: 2, py: 1.2 }}
+              disabled={loading}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                isRegistering ? 'Đăng ký' : 'Đăng nhập'
+              )}
+            </Button>
+          </form>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box sx={{ textAlign: 'center' }}>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => setIsRegistering(!isRegistering)}
+              sx={{ textDecoration: 'none' }}
+            >
+              {isRegistering 
+                ? 'Đã có tài khoản? Đăng nhập' 
+                : "Chưa có tài khoản? Đăng ký"}
+            </Link>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+};
+
+export default Login;
